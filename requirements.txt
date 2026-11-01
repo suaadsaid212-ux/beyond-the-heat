@@ -1,4 +1,5 @@
-streamlit>=1.36,<2
+# Tested Streamlit runtime for Beyond the Heat v0.8.
+streamlit==1.66.1
 pandas>=2.1,<3
 numpy>=1.26,<3
 plotly>=5.20,<7

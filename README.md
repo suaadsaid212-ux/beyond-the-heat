@@ -4,16 +4,41 @@
 
 An open, exploratory Streamlit research prototype for analyzing environmental claims, media framing, narrative amplification, and environmental health communication risk.
 
+Use the sidebar to move between four pages:
+
+| Page | Purpose |
+|---|---|
+| Source search | Search news and research by publication period, read a public URL, retain source passages and review saved claims. |
+| Claim analysis | Analyse a coded upload or reviewed collected claims, filter dates, compare periods and export results. |
+| Environmental data | Retrieve optional weather, search interest, air quality and satellite thermal anomaly observations. |
+| Methodology and definitions | Search the glossary, read the proposed formula and its limitations, and open suggested agency sources. |
+
+The source page is the default landing page. **Analyse my reviewed claims** opens the analysis page directly. Saved claims, retained uploads and model weight choices remain in the current session while moving between pages. Definitions for formula symbols and data abbreviations are searchable on the methodology page; important scoring controls and metrics also provide help notes. The prototype calls its proposed composite score the **Environmental Misinformation Narrative Risk Index (EMNRI)**. Other meanings, including ECR, ICC, PNSI, AQI, FIRMS, FRP and UTC, are defined explicitly in the interface.
+
 ## Research status
 
-**Version 0.6: prototype only.** Search real news and scholarly metadata, read public source pages, and build a corpus of claims with source passages and links. The EMNRI composite score is a proposed construct, not a validated scientific or public health measure. Bundled scoring data are synthetic. Optional environmental observations are retrieved separately and are not automatically included in the score. Political framing is not equivalent to misinformation, and the platform does not identify political ideology or prove causality.
+**Version 0.7: prototype only.** Search real news and scholarly metadata by publication period, read public source pages, and build a dated corpus of claims with source passages and links. Filter the analysis by date, inspect daily, weekly or monthly summaries, and compare two periods. The EMNRI composite score is a proposed construct, not a validated scientific or public health measure. Bundled scoring data are synthetic. Optional environmental observations are retrieved separately and are not automatically included in the score. Political framing is not equivalent to misinformation, and the platform does not identify political ideology or prove causality.
+
+## Dates and period comparisons
+
+Choose a publication period before searching. News supports the last 7, 30 or 90 days and custom start and end dates. Crossref also supports any publication date. Custom ranges are passed to the source index and checked against the returned publication metadata. Both endpoints are included. Google News historical coverage is incomplete and its date operators are not a complete historical archive. Crossref uses `from-pub-date` and `until-pub-date` filters. The search log and saved claims retain the requested dates.
+
+Publication and retrieval are different dates. Bounded searches exclude unknown dates and partial year or month dates whose entire stated span does not fit inside the requested range. For example, a record dated only 2024 can be included in a search covering all of 2024, but not in a search limited to February 2024. The original date precision remains visible. No January 1 date is invented.
+
+When capturing a claim, a complete provider publication date is retained in the analysis `date` column. For a direct source or a corrected date, enter the publication date printed in the source and document its location in **Publication date evidence**. The original provider `published_at` is preserved, with separate `date_basis` and `date_evidence` fields. Leave unknown dates empty. Retrieval time never substitutes for publication time.
+
+In **Time period for claim analysis**, enable **Filter claim analysis by date** and select inclusive start and end dates. Country, language and topic selections also apply. The interface reports undated or incomplete records excluded by the date filter. Without an active date filter, those records can remain in non temporal analysis but do not enter trends or period comparisons. Uploaded CSVs use their documented `date` field; confirm what that field represents before comparing them with collected publication dates. Timed dates use UTC.
+
+Choose **Daily**, **Weekly** or **Monthly** grouping. Weekly bins start on Monday and calendar months start on their first day. Counts and mean scores describe selected dated records. Only populated periods are shown; edge bins may be partial after filtering. The period table and CSV retain the bin boundaries and sample counts. In **Compare two periods**, choose nonoverlapping periods in chronological order to view counts, calendar durations, mean scores and the change in mean EMNRI points. Empty period averages and their change remain unavailable. Comparison results recompute when weights or dataset filters change.
+
+The analysis Excel workbook includes **Period summary**, and **Period comparison** after a comparison is requested, alongside provenance recording the date filter and grouping. Counts describe the selected corpus and index coverage, not the total number of environmental claims or misinformation prevalence. Unequal durations, source composition, collection coverage and coding differences can explain changes. These are descriptive comparisons, without causal or significance claims. The EMNRI formula is unchanged.
 
 ## Search sources and collect claims
 
 1. In **Search sources**, enter a topic, claim or organisation and an optional country focus. Choose Google News RSS for news or Crossref for research metadata. No additional API key is required.
 2. Select a result and open its source link. **Capture a claim from this result** retains the headline or available abstract as an unreviewed candidate. The text type is labelled; a title is never presented as the full article.
 3. To inspect a public article or agency report, use **Read a URL** with its HTTPS publisher URL. The reader supports HTML, plain text and selectable text PDFs. Google News redirect links must first be opened to obtain the publisher URL. Restricted, scanned or inaccessible sources may need manual reading at the original link.
-4. Inspect a suggested passage or retain another passage copied from the source text. Enter the claim for review, confirm the country and language, choose a topic, then save. Suggested passages are selected by word overlap and source order; they are not generated fact checks.
+4. Inspect a suggested passage or retain another passage copied from the source text. Enter the claim for review, confirm its publication date when known, country and language, choose a topic, then save. Suggested passages are selected by word overlap and source order; they are not generated fact checks. Saved claims refresh immediately after capture.
 5. In **Saved claims**, record all five indicators using your documented protocol, add the evidence and rationale, and mark the claim **Reviewed**. **Analyse my reviewed claims** sends only complete reviewed records to the dashboard. Uncoded values stay missing and cannot enter the score. The EMNRI formula is unchanged.
 
 Search results include a title, publisher, source URL, publication date when supplied, retrieval time, provider and search query. Saved claims retain the passage type and a hash of the available source text. Publication dates keep the provider's precision. A year only date does not become an invented daily observation. Country focus and news editions are search settings, not verified content geography or detected language. Confirm those separately when capturing a claim.
@@ -33,7 +58,7 @@ streamlit run app.py
 
 ## Deploy to Streamlit Community Cloud
 
-1. Create a GitHub repository and upload the contents of this folder, including `app.py`, `src/`, `data/`, and `requirements.txt`.
+1. Create a GitHub repository and upload the contents of this folder, including `app.py`, `views/`, `src/`, `data/`, and `requirements.txt`.
 2. Open https://share.streamlit.io and sign in with GitHub.
 3. Select the repository, branch `main`, and entrypoint `app.py`.
 4. Deploy. The demonstration, weather and Google Trends panels do not need an OpenAQ key. To enable air quality, add `OPENAQ_API_KEY` in Streamlit app settings under Secrets and restart the app. See the OpenAQ setup below.

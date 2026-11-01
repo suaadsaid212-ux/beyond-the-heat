@@ -139,4 +139,4 @@ def render_air_quality():
             st.dataframe(pd.json_normalize(licenses), use_container_width=True, hide_index=True)
         else:
             st.info('No licence metadata was supplied for this station. Check the original provider terms before reusing its data.')
-        st.caption('Values retain original units. No AQI, health category, misinformation label or replacement estimate is calculated.')
+        st.caption('AQI means Air Quality Index. Values here retain their original pollutant units. No AQI, health category, misinformation label or replacement estimate is calculated.')

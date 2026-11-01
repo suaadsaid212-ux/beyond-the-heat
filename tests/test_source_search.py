@@ -90,7 +90,7 @@ def test_crossref_title_abstract_date_precision_and_type(monkeypatch):
         requests_seen.append(kwargs['params'])
         return reply(json.dumps(payload).encode())
     monkeypatch.setattr(source_search.requests, 'get', get)
-    found = source_search.search_sources('heat', provider=source_search.PROVIDERS[1])['results']
+    found = source_search.search_sources('heat', provider=source_search.PROVIDERS[1], days=None)['results']
     assert len(found) == 2
     assert found[0]['published_at'] == '2024'
     assert found[1]['published_at'] == '2025-07'
@@ -339,9 +339,9 @@ def test_search_capture_review_workflow_and_error_reset(monkeypatch):
     button(app, 'Capture a claim from this result').click().run()
     assert not app.exception
     button(app, 'Save claim and source link').click().run()
-    app.run()
     corpus = app.session_state['claim_corpus']
     assert len(corpus) == 1 and not evidence.ready_for_analysis(corpus[0])
+    assert any('1 saved claims' in item.value for item in app.markdown)
     assert all(item.value is None for item in app.number_input)
     for item in app.number_input:
         item.set_value(.5)
@@ -372,6 +372,7 @@ def test_reviewed_claims_flow_into_dashboard_without_synthetic_data(monkeypatch)
     app.session_state['claim_corpus'] = [captured(), reviewed]
     app.session_state['use_collected_claims'] = True
     app.run()
+    app.switch_page('views/analysis.py').run()
     assert not app.exception
     assert app.metric[0].value == '1'
     assert app.metric[1].value == '25.0 / 100'

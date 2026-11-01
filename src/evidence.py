@@ -9,11 +9,12 @@ import pandas as pd
 
 from src.scoring import FIELDS
 from src.source_search import public_link
+from src.time_periods import date_bounds, publication_span
 
 CORPUS_FIELDS = [
     'claim_id', 'claim', 'source', 'source_url', 'source_title', 'source_passage',
-    'passage_kind', 'source_text_sha256', 'published_at', 'date', 'retrieved_at',
-    'country', 'language', 'topic', 'search_query', 'search_provider',
+    'passage_kind', 'source_text_sha256', 'published_at', 'date', 'date_basis', 'date_evidence', 'retrieved_at',
+    'country', 'language', 'topic', 'search_query', 'search_provider', 'search_start_date', 'search_end_date',
     'review_status', 'coding_protocol', 'coding_rationale', 'coded_at', *FIELDS,
 ]
 
@@ -48,7 +49,7 @@ def candidate_passages(text, query='', limit=8):
     return [row[2] for row in sorted(found)[:limit]]
 
 
-def capture_claim(document, claim, passage, *, country='', language='', topic=''):
+def capture_claim(document, claim, passage, *, country='', language='', topic='', publication_date=None, date_evidence=''):
     claim, passage = compact(claim), compact(passage)
     if not claim or len(claim) > 1500 or not passage or len(passage) > 1500:
         raise ValueError('Enter a claim and a short source passage of up to 1500 characters each.')
@@ -58,16 +59,26 @@ def capture_claim(document, claim, passage, *, country='', language='', topic=''
     if not url:
         raise ValueError('A valid source link is required.')
     published = str(document.get('published_at') or '')
+    span = publication_span(published)
+    analysis_date = span[0].isoformat() if span and span[0] == span[1] else ''
+    date_basis = 'Provider publication date' if analysis_date else 'Publication date unknown or incomplete'
+    if publication_date is not None:
+        selected, _ = date_bounds(publication_date, publication_date)
+        if selected.isoformat() != analysis_date:
+            if not compact(date_evidence):
+                raise ValueError('Document where the entered publication date appears in the source, or leave the date empty.')
+            analysis_date, date_basis = selected.isoformat(), 'Researcher supplied source publication date'
     return {
         'claim_id': sha256((url+'\0'+claim+'\0'+passage).encode()).hexdigest()[:20],
         'claim': claim, 'source': document.get('publisher') or url,
         'source_url': url, 'source_title': document.get('title') or url,
         'source_passage': passage, 'passage_kind': document.get('text_kind', 'Source passage'),
         'source_text_sha256': document.get('text_sha256', ''),
-        'published_at': published, 'date': published[:10] if re.match(r'^\d{4}-\d{2}-\d{2}', published) else '',
+        'published_at': published, 'date': analysis_date, 'date_basis': date_basis, 'date_evidence': compact(date_evidence),
         'retrieved_at': document.get('retrieved_at') or datetime.now(timezone.utc).isoformat(),
         'country': country.strip(), 'language': language.strip(), 'topic': topic.strip(),
         'search_query': document.get('query', ''), 'search_provider': document.get('provider', 'Direct public URL'),
+        'search_start_date': document.get('search_start_date', ''), 'search_end_date': document.get('search_end_date', ''),
         'review_status': 'Unreviewed', 'coding_protocol': '', 'coding_rationale': '', 'coded_at': '',
         **{field: None for field in FIELDS},
     }

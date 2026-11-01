@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from src.exports import figure_png
+from src.definitions import explain
 from src.firms import (
     AREA_DOCS, ATTRIBUTION, FAQ, SOURCES, FIRMSError,
     data_availability, fetch_hotspots, hotspot_excel, hotspot_figures,
@@ -30,7 +31,8 @@ def render_fire_hotspots():
             st.link_button('NASA FIRMS API information', AREA_DOCS)
             return
         source = st.selectbox('FIRMS satellite product', list(SOURCES),
-                              format_func=lambda value: SOURCES[value], key='firms_source')
+                              format_func=lambda value: SOURCES[value], key='firms_source',
+                              help=explain('FIRMS')+'\n\n'+explain('VIIRS')+'\n\n'+explain('MODIS'))
         if st.button('Check FIRMS product date availability', key='firms_check_availability'):
             st.session_state.pop('firms_availability', None)
             try:
@@ -127,6 +129,6 @@ def render_fire_hotspots():
             if png and png['retrieved_at'] == query['retrieved_at_utc'] and png['chart'] == chart_name:
                 st.download_button('Download FIRMS figure PNG', png['bytes'], 'nasa_firms_figure.png', 'image/png')
         st.caption('Repeated observations can describe the same fire or other heat source. Detection counts are not unique fire counts or burned area. Cloud, smoke and satellite sampling can hide fires.')
-        st.caption('NRT data are provisional. Use appropriate standard processing data and independent verification for research. These observations do not automatically change EMNRI scores.')
+        st.caption('NRT means Near Real Time. These data are provisional. Use appropriate standard processing data and independent verification for research. These observations do not automatically change EMNRI scores.')
         st.caption(ATTRIBUTION)
         st.link_button('NASA FIRMS interpretation and limitations', FAQ)

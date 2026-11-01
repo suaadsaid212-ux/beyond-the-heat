@@ -202,5 +202,6 @@ def test_full_app_with_firms_unconfigured(monkeypatch):
     monkeypatch.setattr(fire_hotspots, '_configured_key', lambda: '')
     monkeypatch.setattr(exports, 'figure_png', lambda *a, **k: b'png-test')
     app = AppTest.from_file(Path(__file__).resolve().parents[1] / 'app.py', default_timeout=45).run()
+    app.switch_page('views/environment.py').run()
     assert not app.exception
     assert any('To enable NASA FIRMS' in item.value for item in app.info)

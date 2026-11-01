@@ -3,7 +3,7 @@ from io import BytesIO
 import pandas as pd
 
 
-def excel_bytes(scored, weights, sensitivity=None, provenance=None):
+def excel_bytes(scored, weights, sensitivity=None, provenance=None, time_summary=None, time_comparison=None):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={
             'options': {'strings_to_formulas': False, 'strings_to_urls': False}}) as writer:
@@ -29,6 +29,10 @@ def excel_bytes(scored, weights, sensitivity=None, provenance=None):
             sensitivity.to_excel(writer, sheet_name='Weight sensitivity', index=False)
         if provenance is not None:
             pd.DataFrame([provenance]).to_excel(writer, sheet_name='Provenance', index=False)
+        if time_summary is not None:
+            time_summary.to_excel(writer, sheet_name='Period summary', index=False)
+        if time_comparison is not None:
+            time_comparison.to_excel(writer, sheet_name='Period comparison', index=False)
         for name in writer.sheets:
             ws=writer.sheets[name]
             ws.freeze_panes(1,0)

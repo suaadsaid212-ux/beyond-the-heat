@@ -26,6 +26,7 @@ def test_navigation_opens_separate_pages_and_searchable_glossary(monkeypatch):
     assert not app.exception
     assert app.dataframe[0].value['Term or symbol'].tolist() == ['FRP', 'MW']
     assert 'Fire Radiative Power' in app.dataframe[0].value['Full name or meaning'].tolist()
+    assert any('FRP: Fire Radiative Power' in item.value for item in app.markdown)
     app.switch_page('views/environment.py').run()
     assert not app.exception
     assert any('Live environmental' in item.value for item in app.header)

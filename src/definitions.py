@@ -94,6 +94,10 @@ def render_definitions():
             for term, (name, meaning) in DEFINITIONS.items()
             if not query or query.casefold() in (term+' '+name+' '+meaning).casefold()]
     if rows:
+        term = st.selectbox('Term to explain', [row['Term or symbol'] for row in rows])
+        name, meaning = DEFINITIONS[term]
+        st.markdown(f'**{term}: {name}**')
+        st.write(meaning)
         st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
     else:
         st.info('No matching definition. Try the abbreviation or a word from the term.')

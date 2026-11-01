@@ -6,7 +6,23 @@ An open, exploratory Streamlit research prototype for analyzing environmental cl
 
 ## Research status
 
-**Version 0.5: prototype only.** The EMNRI composite score is a proposed construct, not a validated scientific or public health measure. Bundled scoring data are synthetic. Optional weather, search interest and OpenAQ observations are retrieved separately and are not automatically included in the score. Political framing is not equivalent to misinformation, and the platform does not identify political ideology or prove causality.
+**Version 0.6: prototype only.** Search real news and scholarly metadata, read public source pages, and build a corpus of claims with source passages and links. The EMNRI composite score is a proposed construct, not a validated scientific or public health measure. Bundled scoring data are synthetic. Optional environmental observations are retrieved separately and are not automatically included in the score. Political framing is not equivalent to misinformation, and the platform does not identify political ideology or prove causality.
+
+## Search sources and collect claims
+
+1. In **Search sources**, enter a topic, claim or organisation and an optional country focus. Choose Google News RSS for news or Crossref for research metadata. No additional API key is required.
+2. Select a result and open its source link. **Capture a claim from this result** retains the headline or available abstract as an unreviewed candidate. The text type is labelled; a title is never presented as the full article.
+3. To inspect a public article or agency report, use **Read a URL** with its HTTPS publisher URL. The reader supports HTML, plain text and selectable text PDFs. Google News redirect links must first be opened to obtain the publisher URL. Restricted, scanned or inaccessible sources may need manual reading at the original link.
+4. Inspect a suggested passage or retain another passage copied from the source text. Enter the claim for review, confirm the country and language, choose a topic, then save. Suggested passages are selected by word overlap and source order; they are not generated fact checks.
+5. In **Saved claims**, record all five indicators using your documented protocol, add the evidence and rationale, and mark the claim **Reviewed**. **Analyse my reviewed claims** sends only complete reviewed records to the dashboard. Uncoded values stay missing and cannot enter the score. The EMNRI formula is unchanged.
+
+Search results include a title, publisher, source URL, publication date when supplied, retrieval time, provider and search query. Saved claims retain the passage type and a hash of the available source text. Publication dates keep the provider's precision. A year only date does not become an invented daily observation. Country focus and news editions are search settings, not verified content geography or detected language. Confirm those separately when capturing a claim.
+
+Google News is a changing news index. Its 7, 30 and 90 day windows and official website filters do not provide a complete agency archive or database search. Crossref returns publisher deposited metadata across publication types; abstracts and linked full text vary. The app examines up to three times the requested number of Crossref results, at most 90, and displays only records containing the supplied keywords and country words in the title or available abstract, ignoring common English connecting words. Use a few focused keywords. This literal filter can miss relevant work and is not a systematic literature search. Neither provider establishes claim reliability, scientific consensus or peer review status. Source text can be incomplete and may have reuse restrictions; read and attribute the original source. Provider availability and terms can change.
+
+The reader accepts public HTTPS domains without URL credentials or access tokens, validates every redirect, rejects private network destinations and limits documents to 8 MiB. It retains up to 60,000 text characters; PDFs are limited to 25 pages with extraction time and memory limits. A limited preview is labelled. The reader does not sign in, run website scripts or perform OCR.
+
+Claims and searches remain in the current Streamlit session. Download the claim corpus CSV or evidence workbook before closing the session. Restore the corpus CSV in **Saved claims** to continue later. The session holds up to 500 claims and the last 100 searches. Search responses are cached for 15 minutes; the original retrieval timestamp remains visible. No automatic crawling or background polling runs. The evidence workbook contains claims, search provenance and collection notes. A separate CSV contains only analysis ready claims.
 
 ## Run locally
 
@@ -59,7 +75,7 @@ No license is assigned yet. Choose one before publishing if you want others to r
 ## Multilingual and multi-country support (v0.2)
 Choose English, Arabic, Russian, Spanish or French in the sidebar. Upload UTF-8 CSV files with optional `country` and `language` columns (BCP-47 language codes such as `ar`, `ru`, `en`). Filter by country, language and topic. Export preserves non-Latin scripts in UTF-8 with BOM for spreadsheet compatibility. See `data/multilingual_upload_template.csv`.
 
-**Important:** interface translation is not claim translation, language detection, automatic scraping or fact checking. Scores must be obtained through documented language-appropriate annotation and verification; do not compare scores across countries until measurement equivalence is tested. The suggested source links are starting points only.
+**Important:** interface translation is not claim translation, language detection or fact checking. The source search and collection controls currently use English labels; news editions support the five listed languages. Scores must be obtained through documented language appropriate annotation and verification; do not compare scores across countries until measurement equivalence is tested. Suggested agency links can be opened in the URL reader where public text is available, with index and extraction coverage limitations as described above.
 
 ## Version 0.3: export and climate visuals
 
@@ -120,7 +136,7 @@ General API use is free within the published limits of 60 requests per minute an
 
 This update also fixes duplicate score columns when the dashboard recomputes sensitivity from already scored data, and includes the previously missing annotation agreement dependency. The EMNRI formula and weights are unchanged.
 
-To run the validation suite locally, install `pytest` and run `python -m pytest -q` from this folder. The tests cover the scoring regression, OpenAQ and FIRMS error handling, source metadata, export integrity and Streamlit panel behaviour without making external API calls.
+To run the validation suite locally, install `pytest` and run `python -m pytest -q` from this folder. The tests cover scoring, source search parsing and errors, bounded public document reading, claim capture and coding, exports and Streamlit workflows without making external API calls.
 
 ## NASA FIRMS fire hotspot setup
 

@@ -5,7 +5,8 @@ import pandas as pd
 
 def excel_bytes(scored, weights, sensitivity=None, provenance=None):
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={
+            'options': {'strings_to_formulas': False, 'strings_to_urls': False}}) as writer:
         scored.to_excel(writer, sheet_name='Scored data', index=False)
         summary = pd.DataFrame([
             ['Records', len(scored)],

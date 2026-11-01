@@ -8,3 +8,5 @@ kaleido>=0.2.1,<1
 
 requests>=2.31,<3
 scikit-learn>=1.4,<2
+trafilatura>=2,<3
+pypdf>=6,<7

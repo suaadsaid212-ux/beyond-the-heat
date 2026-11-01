@@ -9,6 +9,7 @@ from src.localization import LANGUAGES, translate
 from src.exports import excel_bytes, figure_png
 from src.theme import apply_theme, hero
 from src.research import weight_sensitivity, narrative_shift, annotation_agreement
+from src.source_workspace import render_source_workspace
 from datetime import datetime, timezone
 
 st.set_page_config(page_title='Beyond the Heat', page_icon='🌡️', layout='wide')
@@ -16,11 +17,16 @@ interface = st.sidebar.selectbox('Interface language / لغة الواجهة / �
 lang = LANGUAGES[interface]
 t = lambda key: translate(lang,key)
 apply_theme()
-hero(t('title'),t('subtitle')+' | Research prototype v0.5')
+hero(t('title'),t('subtitle')+' | Research prototype v0.6')
 st.warning(t('warning'))
+collected = render_source_workspace()
+if collected.empty:
+    st.session_state['use_collected_claims'] = False
 
 with st.sidebar:
     st.header(t('data'))
+    use_collected = st.checkbox('Analyse my reviewed collected claims',
+                                key='use_collected_claims', disabled=collected.empty)
     uploaded = st.file_uploader(t('upload'), type=['csv'])
     st.caption('Required numeric columns: claim_reliability, amplification, health_risk, communication_credibility, political_framing (all 0 to 1). Optional: date, topic, source, claim, event, event_date, source_type.')
     st.header(t('weights'))
@@ -35,14 +41,25 @@ with st.sidebar:
     weights=Weights(a/total,h/total,c/total)
 
 try:
-    df=pd.read_csv(uploaded, encoding='utf-8-sig') if uploaded is not None else pd.read_csv(Path(__file__).parent/'data'/'demo_synthetic.csv')
+    if use_collected:
+        df = collected.copy()
+        data_origin = 'reviewed_collected_claims'
+    elif uploaded is not None:
+        df = pd.read_csv(uploaded, encoding='utf-8-sig')
+        data_origin = 'user_uploaded'
+    else:
+        df = pd.read_csv(Path(__file__).parent/'data'/'demo_synthetic.csv')
+        data_origin = 'synthetic_demonstration'
     scored=score_records(df, weights)
 except Exception as e:
     st.error(f'Unable to load or score dataset: {e}')
     st.stop()
 
-if uploaded is None:
+st.header('Claim analysis')
+if data_origin == 'synthetic_demonstration':
     st.info(t('demo'))
+elif data_origin == 'reviewed_collected_claims':
+    st.info(f'Analysing {len(df)} collected claims with researcher supplied coding. Source retrieval does not validate the coding or the proposed score.')
 
 # Country and content-language filters are metadata, never inferred from language or identity.
 for column, label in [('country',t('country')),('language',t('language'))]:
@@ -154,8 +171,8 @@ if 'date' in scored:
             st.info('No valid dates available.')
 provenance={
     'generated_at_utc':datetime.now(timezone.utc).isoformat(),
-    'app_version':'0.5',
-    'data_origin':'user_uploaded' if uploaded is not None else 'synthetic_demonstration',
+    'app_version':'0.6',
+    'data_origin':data_origin,
     'records_after_filters':len(scored),
     'model_status':'exploratory_unvalidated',
     'weight_amplification':weights.amplification,
@@ -164,9 +181,9 @@ provenance={
     'missing_value_policy':'reject_missing_indicator_values',
     'source_url_field_present':'source_url' in scored.columns,
     'source_retrieval_date_field_present':'retrieved_at' in scored.columns,
-    'annotation_protocol_field_present':'annotation_protocol' in scored.columns,
+    'annotation_protocol_field_present':bool({'annotation_protocol','coding_protocol'} & set(scored.columns)),
 }
-if uploaded is not None and not {'source_url','retrieved_at'}.issubset(scored.columns):
+if data_origin != 'synthetic_demonstration' and not {'source_url','retrieved_at'}.issubset(scored.columns):
     st.warning('For reproducible research, include source_url and retrieved_at columns. The application does not verify submitted claims.')
 
 st.subheader(t('export'))
@@ -187,7 +204,8 @@ with st.expander(t('method')):
     st.latex(r'EMNRI_i=100(1-ECR_i)[w_A A_i+w_H H_i+w_C(1-ICC_i)]')
     st.write('ECR is claim reliability; A is amplification; H is environmental health risk; ICC is communication credibility. Each indicator must be independently operationalized and validated. Political framing is kept separate.')
     st.write('The application does not independently fact-check text or infer political ideology. External weather and air quality observations provide optional context and do not automatically change the score. Uploaded scores must come from a documented coding or measurement process. Missing data are rejected rather than silently imputed.')
-    st.write('Version 0.4 includes descriptive political event shifts, weight sensitivity, optional annotation agreement and provenance metadata. These are not substitutes for external validation. Future research: annotated claim datasets, inter-rater reliability, supervised classifiers, event study methods, uncertainty propagation, temporal leakage checks, cross-region validation and public trust surveys.')
+    st.write('Version 0.6 adds live source search and public source reading. Headlines, abstracts and extracted passages are candidate evidence. Source links, passage types and retrieval dates are retained. The researcher must independently code all five indicators, record a protocol and rationale, and mark a collected claim Reviewed before it enters analysis. Country and content language are researcher supplied metadata. A search country focus or news edition does not establish either.')
+    st.write('Descriptive political event shifts, weight sensitivity, optional annotation agreement and provenance metadata are not substitutes for external validation. Future research: annotated claim datasets, inter-rater reliability, supervised classifiers, event study methods, uncertainty propagation, temporal leakage checks, cross-region validation and public trust surveys.')
 
 with st.expander(t('sources')):
     st.markdown('''**Global:** [WHO](https://www.who.int/data), [WMO](https://wmo.int/), [NASA Earthdata](https://www.earthdata.nasa.gov/), [Copernicus](https://climate.copernicus.eu/).  
@@ -195,7 +213,7 @@ with st.expander(t('sources')):
 **Europe:** [European Environment Agency](https://www.eea.europa.eu/).  
 **Oman:** [National Centre for Statistics and Information](https://www.ncsi.gov.om/).  
 **Russia:** [Roshydromet](https://www.meteorf.gov.ru/).  
-These are research starting points, not live integrations. Verify licensing, coverage and country-specific access before use.''')
+Use Search sources above for indexed news or scholarly metadata, or Read a URL for a specific public report. Official website filters depend on news index coverage and do not search every agency dataset. The environmental data panels below provide their own integrations. Verify licensing, coverage and country-specific access before use.''')
 
 # External sources are deliberately independent from the exploratory misinformation score.
 # Search interest and environmental measurements are contextual variables, not evidence of falsity.

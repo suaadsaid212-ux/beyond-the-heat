@@ -36,11 +36,15 @@ def google_trends_rss(country: str = 'US') -> pd.DataFrame:
 
 def parse_trends_csv(uploaded) -> pd.DataFrame:
     """Read a Google Trends chart CSV including its optional explanatory header lines."""
+    if len(uploaded.getvalue()) > 2 * 1024 * 1024:
+        raise ValueError('Use a Google Trends CSV smaller than 2 MiB.')
     text = uploaded.getvalue().decode('utf-8-sig')
     lines = text.splitlines()
-    first = next((i for i, line in enumerate(lines) if line.lower().startswith(('day,','week,','month,','date,','year,'))), None)
+    first = next((i for i, line in enumerate(lines) if line.lower().startswith(('day,','week,','month,','date,','year,','hour,','time,'))), None)
     if first is None:
         raise ValueError('Could not find a dated Google Trends CSV header. Export Interest over time as CSV.')
-    df = pd.read_csv(StringIO('\n'.join(lines[first:])))
+    df = pd.read_csv(StringIO('\n'.join(lines[first:])), keep_default_na=False, dtype=str)
+    if len(df.columns) < 2 or df.empty:
+        raise ValueError('The export needs dates and at least one keyword interest column with observations.')
     df.rename(columns={df.columns[0]: 'date'}, inplace=True)
     return df

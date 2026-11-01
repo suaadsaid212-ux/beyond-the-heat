@@ -179,7 +179,7 @@ def render_claim_analysis(lang='en'):
                 st.info('No valid dates available.')
     provenance={
         'generated_at_utc':datetime.now(timezone.utc).isoformat(),
-        'app_version':'0.7',
+        'app_version':'0.8',
         'data_origin':data_origin,
         'records_after_filters':len(scored),
         'model_status':'exploratory_unvalidated',

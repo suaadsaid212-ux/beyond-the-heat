@@ -197,7 +197,7 @@ def test_custom_search_dates_reach_provider_from_ui(monkeypatch):
     monkeypatch.setattr(source_workspace, '_search', search)
     app = AppTest.from_function(_workspace, default_timeout=20).run()
     next(item for item in app.selectbox if item.label == 'Publication period').select('Custom dates').run()
-    next(item for item in app.text_input if item.label == 'Search topic, claim or organisation').set_value('heat')
+    next(item for item in app.text_input if item.label == 'Keywords to find claims').set_value('heat')
     next(item for item in app.date_input if item.label == 'Source publication start date').set_value(date(2024, 1, 1))
     next(item for item in app.date_input if item.label == 'Source publication end date').set_value(date(2024, 12, 31))
     next(item for item in app.button if item.label == 'Search sources now').click().run()

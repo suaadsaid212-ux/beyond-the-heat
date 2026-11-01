@@ -333,7 +333,7 @@ def test_search_capture_review_workflow_and_error_reset(monkeypatch):
     monkeypatch.setattr(source_workspace, '_search', search)
     app = AppTest.from_function(_workspace, default_timeout=20).run()
     assert not app.exception and not calls
-    input_for(app, 'Search topic, claim or organisation').set_value('heat Oman')
+    input_for(app, 'Keywords to find claims').set_value('heat Oman')
     button(app, 'Search sources now').click().run()
     assert not app.exception and len(app.dataframe) == 1
     button(app, 'Capture a claim from this result').click().run()

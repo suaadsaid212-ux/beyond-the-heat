@@ -26,7 +26,7 @@ def _search(query, provider, country, language, scope, days, limit, start=None, 
 
 
 def _activate_result(result):
-    st.session_state['evidence_active'] = document_from_result(result)
+    st.session_state['evidence_active'] = {**document_from_result(result), 'capture_origin': 'search'}
 
 
 def _load_public_url(url, metadata=None):
@@ -35,6 +35,7 @@ def _load_public_url(url, metadata=None):
         **(metadata or {}), **document,
         'title': (metadata or {}).get('title') or document['url'],
         'provider': (metadata or {}).get('provider') or 'Direct public URL',
+        'capture_origin': 'search' if metadata else 'url',
     }
 
 
@@ -160,22 +161,30 @@ def render_source_workspace(analysis_page=None):
     st.session_state.setdefault('source_search_log', [])
     st.header('🔎 Search sources and collect claims')
     st.caption('Find real news and research, open source links, and retain passages for review. Search results and suggested passages are unreviewed candidates.')
+    st.info('Start with keywords such as heat stress Oman or الإجهاد الحراري عُمان. Search, select a source, inspect its statement and save an exact passage. Google Trends measures keyword interest; this page finds source material for claims.')
+    pending = st.session_state.pop('claim_search_request', None)
+    if pending:
+        st.session_state['claim_source_query'] = pending['query']
+    st.session_state.setdefault('claim_source_query', st.session_state.get('last_claim_search_keywords', ''))
     if 'claim_capture_notice' in st.session_state:
         st.success(st.session_state.pop('claim_capture_notice'))
     search_tab, read_tab, saved_tab = st.tabs(['Search sources', 'Read a URL', 'Saved claims'])
     with search_tab:
         provider = st.selectbox('Search provider', PROVIDERS, key='source_search_provider', help=explain('RSS'))
-        choices = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Custom dates']
+        choices = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last 365 days', 'Custom dates']
         if provider == PROVIDERS[1]:
             choices = ['Any publication date', *choices]
-        period = st.selectbox('Publication period', choices, index=1 if provider == PROVIDERS[0] else 0,
+        period = st.selectbox('Publication period', choices, index=3 if provider == PROVIDERS[0] else 0,
                               key='source_publication_period_'+str(PROVIDERS.index(provider)))
         today = datetime.now(timezone.utc).date()
         with st.form('source_search_form'):
-            query = st.text_input('Search topic, claim or organisation', placeholder='For example: extreme heat Oman, air pollution, climate misinformation')
+            query = st.text_input('Keywords to find claims', key='claim_source_query',
+                                  placeholder='For example: heat stress Oman, air pollution, climate misinformation')
             country = st.text_input('Country or region focus (optional)', placeholder='For example: Oman')
             start, end = None, None
             days = {'Last 7 days': 7, 'Last 30 days': 30, 'Last 90 days': 90}.get(period)
+            if period == 'Last 365 days':
+                start, end = today-timedelta(days=364), today
             if period == 'Custom dates':
                 a, b = st.columns(2)
                 start = a.date_input('Source publication start date', value=today-timedelta(days=90),
@@ -194,8 +203,10 @@ def render_source_workspace(analysis_page=None):
                 limit = st.selectbox('Maximum results', [10, 20, 30], index=1)
                 st.caption('Crossref searches scholarly metadata. Displayed records must contain the supplied keywords and country words in their title or available abstract. Use a few focused keywords; this is not a complete literature search. Abstracts, publication types and full text availability vary.')
             submit = st.form_submit_button('Search sources now')
-        if submit:
+        if submit or pending:
             st.session_state.pop('source_search_results', None)
+            st.session_state.pop('evidence_active', None)
+            st.session_state['last_claim_search_keywords'] = query.strip()
             try:
                 with st.spinner('Searching public sources...'):
                     result = _search(query, provider, country, language, scope, days, limit, start, end)
@@ -214,17 +225,22 @@ def render_source_workspace(analysis_page=None):
             if not rows:
                 st.info('No indexed results were returned. Broaden the words or source scope, try the other provider, or use Read a URL for a specific public report.')
             else:
-                st.dataframe(pd.DataFrame(rows)[['title', 'publisher', 'published_at', 'excerpt_kind', 'url']],
-                             use_container_width=True, hide_index=True,
-                             column_config={'url': st.column_config.LinkColumn('Source link')})
-                st.download_button('Download source search CSV', pd.DataFrame(rows).to_csv(index=False).encode('utf-8-sig'),
-                                   'beyond_the_heat_source_search.csv', 'text/csv')
+                st.success(f'{len(rows)} sources found. Select one below to inspect a statement and its source link.')
+                with st.expander('All source results and CSV download'):
+                    st.dataframe(pd.DataFrame(rows)[['title', 'publisher', 'published_at', 'excerpt_kind', 'url']],
+                                 use_container_width=True, hide_index=True,
+                                 column_config={'url': st.column_config.LinkColumn('Source link')})
+                    st.download_button('Download source search CSV', pd.DataFrame(rows).to_csv(index=False).encode('utf-8-sig'),
+                                       'beyond_the_heat_source_search.csv', 'text/csv')
                 chosen = st.selectbox('Source to inspect', list(range(len(rows))),
                                       format_func=lambda index: rows[index]['title'][:180], key='source_search_selection')
                 record = rows[chosen]
                 st.write(record['title'])
                 st.caption(f"{record['publisher']} | Published: {record['published_at'] or 'not supplied'} | {record['excerpt_kind']}")
+                st.markdown('**Candidate statement to inspect**')
                 st.write(record['excerpt'][:2000])
+                if record['excerpt_kind'] in ('News headline', 'Research title only'):
+                    st.caption('Only the indexed title is available here. Read the original source before assessing the statement; a headline is not the full article.')
                 st.link_button('Open source article or paper', record['url'])
                 a, b = st.columns(2)
                 if a.button('Capture a claim from this result', key='use_search_result'):
@@ -236,6 +252,8 @@ def render_source_workspace(analysis_page=None):
                     except SourceReadError as exc:
                         _activate_result(record)
                         st.info(str(exc))
+        if (st.session_state.get('evidence_active') or {}).get('capture_origin', 'search') == 'search':
+            _capture_active()
     with read_tab:
         st.caption('Paste a public HTTPS article, agency report or PDF URL, including sources outside the search indexes.')
         with st.form('read_public_source_form'):
@@ -249,8 +267,9 @@ def render_source_workspace(analysis_page=None):
             except SourceReadError as exc:
                 st.error(str(exc))
         st.caption('Some websites require sign in, use scripts, or restrict extraction. Source links remain available for inspection at the publisher.')
+        if (st.session_state.get('evidence_active') or {}).get('capture_origin') == 'url':
+            _capture_active()
     with saved_tab:
         _saved_claims(analysis_page)
-    _capture_active()
     st.divider()
     return analysis_claims(st.session_state['claim_corpus'])
